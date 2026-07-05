@@ -1,0 +1,7 @@
+# No third-party Python packages required — the script uses only the
+# standard library (subprocess, xml, smtplib, json).
+#
+# External dependency (not pip-installable):
+#   Nmap  - https://nmap.org/download.html
+#   Npcap - https://npcap.com/  (bundled with the Nmap Windows installer —
+#           just make sure "Npcap" is checked during install)
