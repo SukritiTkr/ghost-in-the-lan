@@ -1,40 +1,59 @@
-# 👻 Ghost in the LAN (Windows Setup)
+# 👻 Ghost in the LAN
 
-Detects new/unrecognized devices on your WiFi and emails you an alert when a "ghost" joins your network.
+A lightweight, automated network security monitor that acts as a tripwire for your local WiFi. It continuously audits your subnet for unauthorized devices and instantly dispatches an email alert the second an unrecognized MAC address ("a ghost") connects.
 
-## 1. Install prerequisites
+---
 
-1. **Python 3.9+** — https://www.python.org/downloads/ (check "Add Python to PATH" during install)
-2. **Nmap** — https://nmap.org/download.html
-   - Run the Windows installer.
-   - Make sure the **Npcap** checkbox is selected during install (this is what lets Nmap see MAC addresses).
-3. Confirm both are on your PATH by opening a new terminal (PowerShell or cmd) and running:
-   ```
-   python --version
-   nmap --version
-   ```
+## 🚀 Core Features
 
-## 2. Find your subnet
+* **🕵️ Automated Intruder Detection:** Scans your network using high-precision Nmap discovery to capture active MAC addresses.
+* **📧 Instant Threat Alerting:** Connects securely via SMTP to shoot you an immediate email warning when an unknown device breaches the network.
+* **📝 Local Logging System:** Maintains a running ledger (`ghost_log.txt`) alongside console outputs for continuous activity tracking.
+* **📂 Known Device Whitelisting:** Simple JSON configuration mapping trusted devices so you only get alerted for actual anomalies.
 
-Run `ipconfig` in a terminal and look for your WiFi adapter's "IPv4 Address" and "Subnet Mask".
-If your IP is `192.168.1.42` with mask `255.255.255.0`, your subnet is `192.168.1.0/24`.
-Update the `SUBNET` variable at the top of `ghost_in_the_lan.py` if it's different.
+---
 
-## 3. Run your first scan
+## 🛠️ Prerequisites & Installation
 
-**Important: MAC address detection requires Administrator privileges on Windows.**
-Right-click your terminal (PowerShell/cmd/Windows Terminal) and choose **"Run as administrator"**, then:
+### 1. Engine Setup
+
+* **Python 3.9+** — Ensure you check **"Add Python to PATH"** during installation.
+* **Nmap Engine** — Run the Windows installer and make sure **Npcap** is checked (essential for MAC address capturing on Windows).
+
+Verify both environments are active via terminal:
+
+```bash
+python --version
+nmap --version
 
 ```
+
+### 2. Network Alignment
+
+Run `ipconfig` to discover your WiFi adapter's IPv4 address and Subnet Mask.
+
+* *Example:* If your IP is `192.168.1.42` and mask is `255.255.255.0`, your subnet target is `192.168.1.0/24`.
+* Update the `SUBNET` parameter at the top of `ghost_in_the_lan.py` accordingly.
+
+---
+
+## ⚙️ Configuration & Execution
+
+### Step 1: Initialize & Scan Network
+
+Open an **Administrative Terminal** (Right-click PowerShell/CMD → *Run as Administrator*) and map the network:
+
+```bash
 cd path\to\network_monitor
 python ghost_in_the_lan.py --scan-once
+
 ```
 
-This prints every device found, tagged `UNKNOWN` (since `known_devices.json` starts empty).
+*This performs an isolated initial scan, highlighting all connected hosts as `UNKNOWN`.*
 
-## 4. Mark your own devices as "known"
+### Step 2: Provision Whitelist
 
-Open `known_devices.json` and add your own devices, matching the MAC addresses printed in step 3:
+Open the automatically generated `known_devices.json` and append your trusted network hardware:
 
 ```json
 {
@@ -42,43 +61,56 @@ Open `known_devices.json` and add your own devices, matching the MAC addresses p
   "11:22:33:44:55:66": "Living Room Smart TV",
   "de:ad:be:ef:00:01": "My Laptop"
 }
-```
-
-Run `--scan-once` again — everything you added should no longer say `UNKNOWN`.
-
-## 5. Set up email alerts (optional but recommended)
-
-1. Go to https://myaccount.google.com/apppasswords (requires 2-Step Verification enabled on your Google account).
-2. Generate an "app password" for "Mail".
-3. In `ghost_in_the_lan.py`, set:
-   ```python
-   EMAIL_ENABLED = True
-   EMAIL_FROM = "your_email@gmail.com"
-   EMAIL_PASSWORD = "the 16-character app password"
-   EMAIL_TO = "your_email@gmail.com"
-   ```
-4. Run `--scan-once` again to test — you shouldn't get an email unless there's actually an unknown device. To force a test, temporarily rename a MAC in `known_devices.json`.
-
-## 6. Run continuously
-
-Without `--scan-once`, the script loops forever, scanning every `INTERVAL_MINUTES` (default 5):
 
 ```
+
+*Re-run `--scan-once` to confirm your whitelisted assets register as recognized.*
+
+### Step 3: Configure SMTP Email Alerts (Optional)
+
+1. Head to [Google App Passwords](https://myaccount.google.com/apppasswords) *(Requires 2FA active)*.
+2. Generate an app-specific string for "Mail".
+3. Update the credential block inside `ghost_in_the_lan.py`:
+
+```python
+EMAIL_ENABLED = True
+EMAIL_FROM = "your_email@gmail.com"
+EMAIL_PASSWORD = "your-16-character-app-password"
+EMAIL_TO = "your_email@gmail.com"
+
+```
+
+---
+
+## 🏃 Deployment Modes
+
+### Manual Background Execution
+
+To run the script indefinitely on a standard looping interval (default: 5 minutes):
+
+```bash
 python ghost_in_the_lan.py
+
 ```
 
-Leave this terminal (as Administrator) running in the background. Logs go to both the console and `ghost_log.txt`.
+### Automated Windows Persistence (Task Scheduler)
 
-### Running it automatically at startup (optional)
+To ensure the monitor runs silently at system startup:
 
-Use **Task Scheduler**:
-1. Open Task Scheduler → Create Task
-2. General tab: check "Run with highest privileges" (needed for MAC detection)
-3. Triggers tab: "At log on"
-4. Actions tab: Program = `python`, Arguments = `ghost_in_the_lan.py`, "Start in" = your project folder
-5. Save.
+1. Launch **Windows Task Scheduler** $\rightarrow$ **Create Task**.
+2. **General Tab:** Toggle `Run with highest privileges` *(Crucial for raw packet/MAC parsing)*.
+3. **Triggers Tab:** Set to `At log on`.
+4. **Actions Tab:** Action: `Start a program` | Program: `python` | Arguments: `ghost_in_the_lan.py` | Start in: `Your project absolute directory`.
 
-## Notes
+---
 
-- If you ever move this to a Raspberry Pi later, the script is identical — just install Nmap via `sudo apt install nmap` and run it with `sudo` (Linux doesn't need Npcap).
-- Devices that are asleep or have WiFi randomization/private MAC address features enabled (common on modern phones) may show up with a different MAC each time — you may need to disable "private WiFi address" for your own phone in its WiFi settings so it matches consistently.
+## 💡 Operational Notes
+
+* **Linux/Raspberry Pi Portability:** The code core is fully cross-platform. To port to a Pi, simply run `sudo apt install nmap` and execute the script using `sudo python3`.
+* **MAC Randomization:** Modern iOS/Android privacy flags ("Private Wi-Fi Address") shift MAC addresses dynamically. For flawless tracking, toggle off private MAC addresses for your home network profile.
+
+---
+
+## 📜 License
+
+Distributed under the MIT License. See `LICENSE` for further details.
